@@ -101,10 +101,10 @@ def train(eval_env, model, config):
             model.learn(
                 total_timesteps=config["timesteps_per_epoch"],
                 reset_num_timesteps=False,
-                callback=WandbCallback(
-                    gradient_save_freq=100,  # unsure how to intepret it
-                    verbose=2,
-                ),
+                # callback=WandbCallback(
+                #     gradient_save_freq=100,  # unsure how to intepret it
+                #     verbose=2,
+                # ),
             )
 
             stats = eval(eval_env, model, config["eval_episode_num"])
