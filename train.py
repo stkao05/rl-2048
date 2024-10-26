@@ -24,25 +24,20 @@ register(id="2048-eval", entry_point="envs:Eval2048Env")
 
 
 my_config = {
-    "run_id": "ppo",
+    "run_id": "test1",
+    "notes": "negative reward; reward = 0 if reward == 0 else np.log2(reward) / 10",
     "algorithm": PPO,
     "policy_network": "MlpPolicy",
     "epoch_num": 200,
     "eval_episode_num": 100,
     "timesteps_per_epoch": 1000,
     "learning_rate": 1e-4,
-    "n_envs": 1,
+    "n_envs": 6,
 }
 
 my_config["save_path"] = os.path.join("models", my_config["run_id"])
 
 # os.environ["WANDB_MODE"] = "offline"
-wandb.init(
-    project="rl-2048",
-    id=my_config["run_id"],
-    config=my_config,
-    # sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-)
 
 
 def make_env():
@@ -132,6 +127,12 @@ if __name__ == "__main__":
     # logger = configure("/tmp/sb3_log/", ["stdout", "tensorboard"])
     # num_train_envs = 1
     # train_env = DummyVecEnv([make_env for _ in range(num_train_envs)])
+    wandb.init(
+        project="rl-2048",
+        id=my_config["run_id"],
+        config=my_config,
+        # sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+    )
 
     train_env = make_vec_env(
         make_env, n_envs=my_config["n_envs"], vec_env_cls=SubprocVecEnv
@@ -148,9 +149,9 @@ if __name__ == "__main__":
     train(eval_env, model, my_config)
 
     # run final evaluation on test environment
-    test_env = gym.make("2048-eval")
-    score, highest = evaluation(test_env, model, True, eval_num=100)
+    score, highest, rewards = evaluation(eval_env, model, True, eval_num=100)
     test_stats = {
+        "test_rewards": wandb.Histogram(rewards),
         "test_score_mean": np.mean(score),
         "test_score_median": np.median(score),
         "test_score_max": np.max(score),

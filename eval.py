@@ -10,10 +10,50 @@ register(
     entry_point='envs:Eval2048Env'
 )
 
+# original code
+# def evaluation(env, model, render_last, eval_num=100):
+#     """We only evaluate seeds 0-99 as our public test cases."""
+#     score = []
+#     highest = []
+
+#     ### Run eval_num times rollouts,
+#     for seed in range(eval_num):
+#         done = False
+#         # Set seed and reset env using Gymnasium API
+#         obs, info = env.reset(seed=seed)
+
+#         while not done:
+#             # Interact with env using Gymnasium API
+#             action, _state = model.predict(obs, deterministic=True)
+#             obs, reward, done, _, info = env.step(action)
+
+#         # Render the last board state of each episode
+#         # print("Last board state:")
+#         # env.render()
+
+#         score.append(info['score'])
+#         highest.append(info['highest'])
+
+#     ### Render last rollout
+#     if render_last:
+#         print("Rendering last rollout")
+#         done = False
+#         obs, info = env.reset(seed=eval_num-1)
+#         env.render()
+
+#         while not done:
+#             action, _state = model.predict(obs, deterministic=True)
+#             obs, reward, done, _, info = env.step(action)
+#             env.render()
+
+        
+#     return score, highest
+
 def evaluation(env, model, render_last, eval_num=100):
     """We only evaluate seeds 0-99 as our public test cases."""
     score = []
     highest = []
+    rewards = []
 
     ### Run eval_num times rollouts,
     for seed in range(eval_num):
@@ -25,6 +65,7 @@ def evaluation(env, model, render_last, eval_num=100):
             # Interact with env using Gymnasium API
             action, _state = model.predict(obs, deterministic=True)
             obs, reward, done, _, info = env.step(action)
+            rewards.append(reward)
 
         # Render the last board state of each episode
         # print("Last board state:")
@@ -46,7 +87,7 @@ def evaluation(env, model, render_last, eval_num=100):
             env.render()
 
         
-    return score, highest
+    return score, highest, rewards
 
 
 if __name__ == "__main__":

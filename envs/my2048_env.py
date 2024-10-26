@@ -129,13 +129,15 @@ class My2048Env(gym.Env):
             logging.debug("Illegal move")
             info['illegal_move'] = True
             reward = self.illegal_move_reward
-
             # TODO: Modify this part for the agent to have a chance to explore other actions (optional)
             done = True
 
         truncate = False
         info['highest'] = self.highest()
         info['score']   = self.score
+        reward = 0 if reward == 0 else np.log2(reward) / 10
+        if info['illegal_move']:
+            reward = -1
 
         # Return observation (board state), reward, done, truncate and info dict
         return stack(self.Matrix), reward, done, truncate, info
