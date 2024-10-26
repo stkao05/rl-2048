@@ -24,15 +24,15 @@ register(id="2048-eval", entry_point="envs:Eval2048Env")
 
 
 my_config = {
-    "run_id": "test1",
-    "notes": "negative reward; reward = 0 if reward == 0 else np.log2(reward) / 10",
+    "run_id": "ppo-env8-r10-n0.5-f200-2",
+    "notes": "np.log2(reward) / 10; negative=-0.5; foul count: 100; use eval env",
     "algorithm": PPO,
     "policy_network": "MlpPolicy",
     "epoch_num": 200,
     "eval_episode_num": 100,
     "timesteps_per_epoch": 1000,
     "learning_rate": 1e-4,
-    "n_envs": 6,
+    "n_envs": 8,
 }
 
 my_config["save_path"] = os.path.join("models", my_config["run_id"])
@@ -42,6 +42,10 @@ my_config["save_path"] = os.path.join("models", my_config["run_id"])
 
 def make_env():
     env = gym.make("2048-v0")
+    return env
+
+def make_eval_env():
+    env = gym.make("2048-eval")
     return env
 
 
@@ -137,30 +141,32 @@ if __name__ == "__main__":
     train_env = make_vec_env(
         make_env, n_envs=my_config["n_envs"], vec_env_cls=SubprocVecEnv
     )
-    eval_env = DummyVecEnv([make_env])
+    # eval_env = DummyVecEnv([make_env])
+    eval_env = DummyVecEnv([make_eval_env])
     model = my_config["algorithm"](
         my_config["policy_network"],
         train_env,
         verbose=0,
-        learning_rate=my_config["learning_rate"],
+        # learning_rate=my_config["learning_rate"],
         # tensorboard_log=my_config["run_id"],
     )
     # model.set_logger(logger)
     train(eval_env, model, my_config)
 
     # run final evaluation on test environment
-    score, highest, rewards = evaluation(eval_env, model, True, eval_num=100)
-    test_stats = {
-        "test_rewards": wandb.Histogram(rewards),
-        "test_score_mean": np.mean(score),
-        "test_score_median": np.median(score),
-        "test_score_max": np.max(score),
-        "test_score_std": np.std(score),
-        "test_highest_mean": np.mean(highest),
-        "test_highest_median": np.median(highest),
-        "test_highest_max": np.max(highest),
-        "test_highest_std": np.std(highest),
-    }
-    wandb.log(test_stats)
+    # score, highest, rewards = evaluation(eval_env, model, True, eval_num=100)
+    # test_stats = {
+    #     "test_rewards": wandb.Histogram(rewards),
+    #     "test_score_mean": np.mean(score),
+    #     "test_score_median": np.median(score),
+    #     "test_score_max": np.max(score),
+    #     "test_score_std": np.std(score),
+    #     "test_highest_mean": np.mean(highest),
+    #     "test_highest_median": np.median(highest),
+    #     "test_highest_max": np.max(highest),
+    #     "test_highest_std": np.std(highest),
+    # }
+    # wandb.log(test_stats)
+
     wandb.save(my_config["save_path"] + ".zip")
     wandb.finish()
