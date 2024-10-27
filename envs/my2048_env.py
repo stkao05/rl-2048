@@ -139,7 +139,7 @@ class My2048Env(gym.Env):
         info['score']   = self.score
         reward = 0 if reward == 0 else np.log2(reward) / 10
         if info['illegal_move']:
-            reward = -0.5
+            reward = -0.1 * np.log2(self.highest())
 
         # Return observation (board state), reward, done, truncate and info dict
         return stack(self.Matrix), reward, done, truncate, info

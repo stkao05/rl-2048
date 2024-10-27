@@ -17,32 +17,15 @@ import os
 import time
 from eval import evaluation
 
-# os.environ["WANDB_MODE"] = "disabled"
 warnings.filterwarnings("ignore")
 register(id="2048-v0", entry_point="envs:My2048Env")
 register(id="2048-eval", entry_point="envs:Eval2048Env")
 
 
-my_config = {
-    "run_id": "ppo-env8-r10-n0.5-f200-2",
-    "notes": "np.log2(reward) / 10; negative=-0.5; foul count: 100; use eval env",
-    "algorithm": PPO,
-    "policy_network": "MlpPolicy",
-    "epoch_num": 200,
-    "eval_episode_num": 100,
-    "timesteps_per_epoch": 1000,
-    "learning_rate": 1e-4,
-    "n_envs": 8,
-}
-
-my_config["save_path"] = os.path.join("models", my_config["run_id"])
-
-# os.environ["WANDB_MODE"] = "offline"
-
-
 def make_env():
     env = gym.make("2048-v0")
     return env
+
 
 def make_eval_env():
     env = gym.make("2048-eval")
@@ -127,46 +110,66 @@ def train(eval_env, model, config):
                 model.save(f"{save_path}")
 
 
-if __name__ == "__main__":
-    # logger = configure("/tmp/sb3_log/", ["stdout", "tensorboard"])
-    # num_train_envs = 1
-    # train_env = DummyVecEnv([make_env for _ in range(num_train_envs)])
+def experiment(config):
     wandb.init(
         project="rl-2048",
-        id=my_config["run_id"],
-        config=my_config,
+        id=config["run_id"],
+        config=config,
+        save_code=True
         # sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
     )
 
     train_env = make_vec_env(
-        make_env, n_envs=my_config["n_envs"], vec_env_cls=SubprocVecEnv
+        make_env, n_envs=config["n_envs"], vec_env_cls=SubprocVecEnv
     )
-    # eval_env = DummyVecEnv([make_env])
     eval_env = DummyVecEnv([make_eval_env])
-    model = my_config["algorithm"](
-        my_config["policy_network"],
+    model = config["algorithm"](
+        config["policy_network"],
         train_env,
         verbose=0,
-        # learning_rate=my_config["learning_rate"],
-        # tensorboard_log=my_config["run_id"],
+        learning_rate=config["learning_rate"],
     )
-    # model.set_logger(logger)
-    train(eval_env, model, my_config)
+    train(eval_env, model, config)
 
-    # run final evaluation on test environment
-    # score, highest, rewards = evaluation(eval_env, model, True, eval_num=100)
-    # test_stats = {
-    #     "test_rewards": wandb.Histogram(rewards),
-    #     "test_score_mean": np.mean(score),
-    #     "test_score_median": np.median(score),
-    #     "test_score_max": np.max(score),
-    #     "test_score_std": np.std(score),
-    #     "test_highest_mean": np.mean(highest),
-    #     "test_highest_median": np.median(highest),
-    #     "test_highest_max": np.max(highest),
-    #     "test_highest_std": np.std(highest),
-    # }
-    # wandb.log(test_stats)
 
-    wandb.save(my_config["save_path"] + ".zip")
+    code_artifact = wandb.Artifact(name="code", type="code")
+    code_artifact.add_file("./train.py")
+    code_artifact.add_file("./envs/my2048_env.py")
+    wandb.log_artifact(code_artifact)
+
+    wandb.save(config["save_path"] + ".zip")
     wandb.finish()
+
+
+if __name__ == "__main__":
+    # config = {
+    #     "run_id": "ppo-env8-r10-n0.5-f200-2",
+    #     "notes": "np.log2(reward) / 10; negative=-0.5; foul count: 100; use eval env",
+    #     "algorithm": PPO,
+    #     "policy_network": "MlpPolicy",
+    #     "epoch_num": 200,
+    #     "eval_episode_num": 100,
+    #     "timesteps_per_epoch": 1000,
+    #     "learning_rate": 1e-4,
+    #     "n_envs": 8,
+    # }
+    # config["save_path"] = os.path.join("models", config["run_id"])
+    # experiment(config)
+
+    base_config = {
+        "algorithm": PPO,
+        "policy_network": "MlpPolicy",
+        "epoch_num": 400,
+        "eval_episode_num": 100,
+        "timesteps_per_epoch": 1000,
+        "learning_rate": 1e-4,
+        "n_envs": 8,
+    }
+
+    config = {
+        "run_id": "ppo-dynamic-penality",
+        "notes": "reward = -0.1 * np.log2(self.highest())",
+    }
+    config.update(base_config)
+    config["save_path"] = os.path.join("models", config["run_id"])
+    experiment(config)
