@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 import itertools
 import logging
 from six import StringIO
+import io
 
 
 def pairwise(iterable):
@@ -48,6 +49,7 @@ class Eval2048Env(gym.Env):
         self.w = self.size
         self.h = self.size
         self.squares = self.size * self.size
+        self.render_mode = "rgb_array"
 
         # Maintain own idea of game score, separate from rewards
         self.score = 0
@@ -136,14 +138,70 @@ class Eval2048Env(gym.Env):
         return stack(self.Matrix), {}
 
     def render(self, mode='ansi'):
-        outfile = StringIO() if mode == 'ansi' else None
-        s = 'Score: {}\n'.format(self.score)
-        s += 'Highest: {}\n'.format(self.highest())
-        npa = np.array(self.Matrix)
-        grid = npa.reshape((self.size, self.size))
-        s += "{}\n".format(grid)
-        outfile.write(s)
-        return outfile
+        # outfile = StringIO() if mode == 'ansi' else None
+        # s = 'Score: {}\n'.format(self.score)
+        # s += 'Highest: {}\n'.format(self.highest())
+        # npa = np.array(self.Matrix)
+        # grid = npa.reshape((self.size, self.size))
+        # s += "{}\n".format(grid)
+        # outfile.write(s)
+        # return outfile
+
+        cell_size = 100
+        padding = 10
+        font_size = 40
+        colors = {
+            0: (205, 193, 180),
+            2: (238, 228, 218),
+            4: (237, 224, 200),
+            8: (242, 177, 121),
+            # Add more colors as needed for each tile value
+        }
+
+        # Create a blank image for the grid
+        img_size = (self.size * cell_size + (self.size + 1) * padding, 
+                    self.size * cell_size + (self.size + 1) * padding)
+        img = Image.new('RGB', img_size, color=(187, 173, 160))
+        draw = ImageDraw.Draw(img)
+
+        # Font for tile numbers
+        try:
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except IOError:
+            font = ImageFont.load_default()
+
+        # Draw each cell
+        for i in range(self.size):
+            for j in range(self.size):
+                value = self.Matrix[i][j]
+                color = colors.get(value, (205, 193, 180))  # Default color for unlisted values
+                top_left = (j * cell_size + (j + 1) * padding, 
+                            i * cell_size + (i + 1) * padding)
+                bottom_right = ((j + 1) * cell_size + (j + 1) * padding, 
+                                (i + 1) * cell_size + (i + 1) * padding)
+                draw.rectangle([top_left, bottom_right], fill=color)
+
+                if value != 0:
+                    text = str(value)
+                    text_size = 10
+                    text_position = (top_left[0] + (cell_size - text_size) // 2,
+                                     top_left[1] + (cell_size - text_size) // 2)
+                    draw.text(text_position, text, fill=(119, 110, 101), font=font)
+
+        # # Display or save the image
+        # if mode == 'human':
+        #     img.show()
+        # elif mode == 'rgb_array':
+        #     buf = io.BytesIO()
+        #     img.save(buf, format='PNG')
+        #     buf.seek(0)
+        #     return np.array(Image.open(buf))
+
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+        return np.array(Image.open(buf))
+
 
     # Implement 2048 game
     def add_tile(self):
