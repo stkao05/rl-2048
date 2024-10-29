@@ -37,6 +37,8 @@ def eval(env, model, eval_episode_num):
     score = []
     highest = []
     step_count = []
+    step_count_illegal = [] # step count due to illegal termination
+    step_count_done = [] # step count due to done
     illegal_count = []
 
     for seed in range(eval_episode_num):
@@ -55,11 +57,17 @@ def eval(env, model, eval_episode_num):
         step_count.append(count)
         illegal_count.append(1 if info[0]["illegal_move"] else 0)
 
+        if info[0]["illegal_move"]:
+            step_count_illegal.append(count)
+        else:
+            step_count_done.append(count)
+
     stats = {
         "score_mean": np.mean(score),
         "score_median": np.median(score),
         "score_max": np.max(score),
         "score_std": np.std(score),
+        "score_hist": wandb.Histogram(score),
         "highest_mean": np.mean(highest),
         "highest_median": np.median(highest),
         "highest_max": np.max(highest),
@@ -69,6 +77,9 @@ def eval(env, model, eval_episode_num):
         "step_count_median": np.median(step_count),
         "step_count_max": np.max(step_count),
         "step_count_std": np.std(step_count),
+        "step_count_hist": wandb.Histogram(step_count),
+        "step_count_illegal_hist": wandb.Histogram(step_count_illegal),
+        "step_count_done_hist": wandb.Histogram(step_count_done),
         "illegal_move": np.sum(illegal_count) / eval_episode_num,
     }
 
@@ -84,7 +95,7 @@ def train(eval_env, model, config):
                 total_timesteps=config["timesteps_per_epoch"],
                 reset_num_timesteps=False,
                 # callback=WandbCallback(
-                #     gradient_save_freq=100,  # unsure how to intepret it
+                #     gradient_save_freq=config["timesteps_per_epoch"],
                 #     verbose=2,
                 # ),
             )
@@ -115,7 +126,7 @@ def experiment(config):
         project="rl-2048",
         id=config["run_id"],
         config=config,
-        save_code=True
+        save_code=True,
         # sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
     )
 
@@ -128,9 +139,9 @@ def experiment(config):
         train_env,
         verbose=0,
         learning_rate=config["learning_rate"],
+        policy_kwargs=config["policy_kwargs"] if "policy_kwargs" in config else None,
     )
     train(eval_env, model, config)
-
 
     code_artifact = wandb.Artifact(name="code", type="code")
     code_artifact.add_file("./train.py")
@@ -142,24 +153,10 @@ def experiment(config):
 
 
 if __name__ == "__main__":
-    # config = {
-    #     "run_id": "ppo-env8-r10-n0.5-f200-2",
-    #     "notes": "np.log2(reward) / 10; negative=-0.5; foul count: 100; use eval env",
-    #     "algorithm": PPO,
-    #     "policy_network": "MlpPolicy",
-    #     "epoch_num": 200,
-    #     "eval_episode_num": 100,
-    #     "timesteps_per_epoch": 1000,
-    #     "learning_rate": 1e-4,
-    #     "n_envs": 8,
-    # }
-    # config["save_path"] = os.path.join("models", config["run_id"])
-    # experiment(config)
-
     base_config = {
         "algorithm": PPO,
         "policy_network": "MlpPolicy",
-        "epoch_num": 400,
+        "epoch_num": 300,
         "eval_episode_num": 100,
         "timesteps_per_epoch": 1000,
         "learning_rate": 1e-4,
@@ -167,8 +164,8 @@ if __name__ == "__main__":
     }
 
     config = {
-        "run_id": "ppo-dynamic-penality",
-        "notes": "reward = -0.1 * np.log2(self.highest())",
+        "run_id": "ppo-bass-2",
+        "notes": "",
     }
     config.update(base_config)
     config["save_path"] = os.path.join("models", config["run_id"])
