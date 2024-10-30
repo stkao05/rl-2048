@@ -1,35 +1,19 @@
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
-import torch as th
-from stable_baselines3.common.policies import ActorCriticPolicy
+from typing import Optional, Tuple
 
-from stable_baselines3.common.distributions import (
-    BernoulliDistribution,
-    CategoricalDistribution,
-    DiagGaussianDistribution,
-    Distribution,
-    MultiCategoricalDistribution,
-    StateDependentNoiseDistribution,
-    make_proba_distribution,
-)
-
-import collections
-import copy
-import warnings
-from abc import ABC, abstractmethod
-from functools import partial
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
-
-import numpy as np
+import gymnasium as gym
 import torch as th
 from gymnasium import spaces
+from stable_baselines3.common.distributions import (
+    Distribution,
+)
+from stable_baselines3.common.policies import ActorCriticPolicy, BaseFeaturesExtractor
 from torch import nn
 
 
-
-
 class MaskedMLPPolicy(ActorCriticPolicy):
-
-    def forward(self, obs: th.Tensor, deterministic: bool = False) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
+    def forward(
+        self, obs: th.Tensor, deterministic: bool = False
+    ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
         Forward pass in all the networks (actor and critic)
 
@@ -56,7 +40,9 @@ class MaskedMLPPolicy(ActorCriticPolicy):
 
         return actions, values, log_prob
 
-    def evaluate_actions(self, obs, actions: th.Tensor) -> Tuple[th.Tensor, th.Tensor, Optional[th.Tensor]]:
+    def evaluate_actions(
+        self, obs, actions: th.Tensor
+    ) -> Tuple[th.Tensor, th.Tensor, Optional[th.Tensor]]:
         """
         Evaluate actions according to the current policy,
         given the observations.
@@ -74,7 +60,6 @@ class MaskedMLPPolicy(ActorCriticPolicy):
             pi_features, vf_features = features
             latent_pi = self.mlp_extractor.forward_actor(pi_features)
             latent_vf = self.mlp_extractor.forward_critic(vf_features)
-
 
         action_mask = get_action_mask(obs)
         distribution = self._get_action_dist_from_latent(latent_pi, action_mask)
@@ -96,8 +81,9 @@ class MaskedMLPPolicy(ActorCriticPolicy):
 
         return self._get_action_dist_from_latent(latent_pi, action_mask)
 
-
-    def _get_action_dist_from_latent(self, latent_pi: th.Tensor, action_mask: th.Tensor) -> Distribution:
+    def _get_action_dist_from_latent(
+        self, latent_pi: th.Tensor, action_mask: th.Tensor
+    ) -> Distribution:
         """
         Retrieve action distribution given the latent codes.
 
@@ -111,57 +97,112 @@ class MaskedMLPPolicy(ActorCriticPolicy):
 
 
 def get_action_mask(obs):
-    boards = observation_to_grid(obs)
-    batch_n = obs.shape[0]
-    action_mask = th.zeros(batch_n, 4)
+    boards = observation_to_grid(obs)  # boards: (batch_n, 4, 4)
 
-    for i in range(batch_n):
-        action_mask[i] = one_action_mask(boards[i])
+    up = is_valid_move_up(boards)  # (batch_n,)
+    right = is_valid_move_right(boards)
+    down = is_valid_move_down(boards)
+    left = is_valid_move_left(boards)
 
+    valid_moves = th.stack([up, right, down, left], dim=1)  # (batch_n, 4)
+    action_mask = (1 - valid_moves.int()) * -1e8
     return action_mask
 
 
-def one_action_mask(board):
-    up = is_valid_move_up(board)
-    right = is_valid_move_right(board)
-    down = is_valid_move_down(board)
-    left = is_valid_move_left(board)
-    # negative num for invalid action 
-    action_mask = (1 - th.tensor([up, right, down, left], dtype=th.int)) * -1e8
-    return action_mask
+def is_valid_move_left(boards):
+    # boards: (batch_n, 4, 4)
+    curr_cells = boards[:, :, 1:]  # (batch_n, 4, 3)
+    left_cells = boards[:, :, :-1]  # (batch_n, 4, 3)
+
+    not_zero = curr_cells != 0
+    left_zero_or_same = (left_cells == 0) | (left_cells == curr_cells)
+    valid_moves = not_zero & left_zero_or_same  # (batch_n, 4, 3)
+
+    return valid_moves.any(dim=(1, 2))  # (batch_n,)
 
 
-# observation: (B, 16, 4, 4)
+def is_valid_move_right(boards):
+    curr_cells = boards[:, :, :-1]  # (batch_n, 4, 3)
+    right_cells = boards[:, :, 1:]  # (batch_n, 4, 3)
+
+    not_zero = curr_cells != 0
+    right_zero_or_same = (right_cells == 0) | (right_cells == curr_cells)
+    valid_moves = not_zero & right_zero_or_same  # (batch_n, 4, 3)
+
+    return valid_moves.any(dim=(1, 2))  # (batch_n,)
+
+
+def is_valid_move_up(boards):
+    curr_cells = boards[:, 1:, :]  # (batch_n, 3, 4)
+    upper_cells = boards[:, :-1, :]  # (batch_n, 3, 4)
+
+    not_zero = curr_cells != 0
+    upper_zero_or_same = (upper_cells == 0) | (upper_cells == curr_cells)
+    valid_moves = not_zero & upper_zero_or_same  # (batch_n, 3, 4)
+
+    return valid_moves.any(dim=(1, 2))  # (batch_n,)
+
+
+def is_valid_move_down(boards):
+    curr_cells = boards[:, :-1, :]  # (batch_n, 3, 4)
+    lower_cells = boards[:, 1:, :]  # (batch_n, 3, 4)
+
+    not_zero = curr_cells != 0
+    lower_zero_or_same = (lower_cells == 0) | (lower_cells == curr_cells)
+    valid_moves = not_zero & lower_zero_or_same  # (batch_n, 3, 4)
+
+    return valid_moves.any(dim=(1, 2))  # (batch_n,)
+
+
 def observation_to_grid(observation):
     powers_of_2 = 2 ** th.arange(1, 17, dtype=th.int32).view(16, 1, 1)
-    grid = th.sum(observation * powers_of_2, dim=1) # (B, 4, 4)
+    grid = th.sum(observation * powers_of_2, dim=1)  # (B, 4, 4)
     return grid
 
 
-def is_valid_move_left(board):
-    for row in board:
-        for i in range(1, 4):
-            if row[i] != 0 and (row[i - 1] == 0 or row[i - 1] == row[i]):
-                return True
-    return False
+class GridCnn(BaseFeaturesExtractor):
+    """
+    :param observation_space:
+    :param features_dim: Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    :param normalized_image: Whether to assume that the image is already normalized
+        or not (this disables dtype and bounds checks): when True, it only checks that
+        the space is a Box and has 3 dimensions.
+        Otherwise, it checks that it has expected dtype (uint8) and bounds (values in [0, 255]).
+    """
 
-def is_valid_move_right(board):
-    for row in board:
-        for i in range(2, -1, -1):
-            if row[i] != 0 and (row[i + 1] == 0 or row[i + 1] == row[i]):
-                return True
-    return False
+    def __init__(
+        self,
+        observation_space: gym.Space,
+        features_dim: int = 64,
+        normalized_image: bool = False,
+    ) -> None:
+        assert isinstance(observation_space, spaces.Box), (
+            "NatureCNN must be used with a gym.spaces.Box ",
+            f"observation space, not {observation_space}",
+        )
+        super().__init__(observation_space, features_dim)
 
-def is_valid_move_up(board):
-    for col in range(4):
-        for row in range(1, 4):
-            if board[row][col] != 0 and (board[row - 1][col] == 0 or board[row - 1][col] == board[row][col]):
-                return True
-    return False
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+        n_input_channels = observation_space.shape[0]
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 32, kernel_size=2, stride=1, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=2, stride=1, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
 
-def is_valid_move_down(board):
-    for col in range(4):
-        for row in range(2, -1, -1):
-            if board[row][col] != 0 and (board[row + 1][col] == 0 or board[row + 1][col] == board[row][col]):
-                return True
-    return False
+        # Compute shape by doing one forward pass
+        with th.no_grad():
+            n_flatten = self.cnn(
+                th.as_tensor(observation_space.sample()[None]).float()
+            ).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        observations = observations * 0.5
+        x = self.cnn(observations)
+        return self.linear(x)

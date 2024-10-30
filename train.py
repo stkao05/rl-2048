@@ -3,20 +3,14 @@ import gymnasium as gym
 from gymnasium.envs.registration import register
 
 import wandb
-from wandb.integration.sb3 import WandbCallback
 
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
-from stable_baselines3 import A2C, DQN, PPO, SAC
-from stable_baselines3.common.logger import configure
+from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 import numpy as np
 from tqdm import tqdm
 import os
-import time
-from eval import evaluation
-from cnn import GridCnn
 from policy import MaskedMLPPolicy
 
 warnings.filterwarnings("ignore")
@@ -175,7 +169,7 @@ if __name__ == "__main__":
 
     config = {
         "name": "ppo-masked",
-        "save_model": False,
+        "save_model": True,
         "notes": "",
     }
     config.update(base_config)
