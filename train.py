@@ -17,6 +17,7 @@ import os
 import time
 from eval import evaluation
 from cnn import GridCnn
+from policy import MaskedMLPPolicy
 
 warnings.filterwarnings("ignore")
 register(id="2048-v0", entry_point="envs:My2048Env")
@@ -160,21 +161,21 @@ def experiment(config):
 if __name__ == "__main__":
     base_config = {
         "algorithm": PPO,
-        "policy_network": "CnnPolicy",
         "epoch_num": 200,
         "eval_episode_num": 100,
         "timesteps_per_epoch": 1000,
         "learning_rate": 1e-4,
         "n_envs": 8,
-        "policy_kwargs": {
-            "features_extractor_class": GridCnn,
-            "net_arch": []
-        }
+        "policy_network": MaskedMLPPolicy,
+        # "policy_kwargs": {
+        #     "features_extractor_class": GridCnn,
+        #     "net_arch": []
+        # }
     }
 
     config = {
-        "name": "ppo-cnn",
-        "save_model": True,
+        "name": "ppo-masked",
+        "save_model": False,
         "notes": "",
     }
     config.update(base_config)
