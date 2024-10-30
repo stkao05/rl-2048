@@ -19,13 +19,17 @@ from eval import evaluation
 
 warnings.filterwarnings("ignore")
 register(id="2048-v0", entry_point="envs:My2048Env")
+register(id="2048-src", entry_point="envs:Src2048Env")
 register(id="2048-eval", entry_point="envs:Eval2048Env")
 
 
-def make_env():
+def make_train_env():
     env = gym.make("2048-v0")
     return env
 
+def make_src_env():
+    env = gym.make("2048-src")
+    return env
 
 def make_eval_env():
     env = gym.make("2048-eval")
@@ -124,14 +128,14 @@ def train(eval_env, model, config):
 def experiment(config):
     wandb.init(
         project="rl-2048",
-        id=config["run_id"],
+        name=config["name"],
         config=config,
         save_code=True,
         # sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
     )
 
     train_env = make_vec_env(
-        make_env, n_envs=config["n_envs"], vec_env_cls=SubprocVecEnv
+        make_train_env, n_envs=config["n_envs"], vec_env_cls=SubprocVecEnv
     )
     eval_env = DummyVecEnv([make_eval_env])
     model = config["algorithm"](
@@ -143,9 +147,12 @@ def experiment(config):
     )
     train(eval_env, model, config)
 
-    code_artifact = wandb.Artifact(name="code", type="code")
-    code_artifact.add_file("./train.py")
+    code_artifact = wandb.Artifact(name="my2048_env.py", type="code")
     code_artifact.add_file("./envs/my2048_env.py")
+    wandb.log_artifact(code_artifact)
+
+    code_artifact = wandb.Artifact(name="trian.py", type="code")
+    code_artifact.add_file("./train.py")
     wandb.log_artifact(code_artifact)
 
     wandb.save(config["save_path"] + ".zip")
@@ -156,7 +163,7 @@ if __name__ == "__main__":
     base_config = {
         "algorithm": PPO,
         "policy_network": "MlpPolicy",
-        "epoch_num": 300,
+        "epoch_num": 200,
         "eval_episode_num": 100,
         "timesteps_per_epoch": 1000,
         "learning_rate": 1e-4,
@@ -164,9 +171,9 @@ if __name__ == "__main__":
     }
 
     config = {
-        "run_id": "ppo-bass-2",
+        "name": "ppo-reward-scaling-neg",
         "notes": "",
     }
     config.update(base_config)
-    config["save_path"] = os.path.join("models", config["run_id"])
+    config["save_path"] = os.path.join("models", config["name"])
     experiment(config)

@@ -3,7 +3,6 @@ from __future__ import print_function
 import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.utils import seeding
-import math
 
 import numpy as np
 
@@ -40,7 +39,7 @@ def stack(flat, layers=16):
     layered = np.transpose(layered, (2,0,1))
     return layered
 
-class My2048Env(gym.Env):
+class Src2048Env(gym.Env):
     metadata = {
         "render_modes": ['ansi', 'human', 'rgb_array'],
         "render_fps": 2,
@@ -119,33 +118,24 @@ class My2048Env(gym.Env):
             reward = float(score)
 
             # TODO: Add reward according to weighted states (optional)
-            # weight = np.array([
-            #         [0  , 0  , 0  , 0  ],
-            #         [0  , 0  , 0  , 0  ],
-            #         [0  , 0  , 0  , 0  ],
-            #         [0  , 0  , 0  , 0  ]])
-
+            weight = np.array([
+                    [0  , 0  , 0  , 0  ],
+                    [0  , 0  , 0  , 0  ],
+                    [0  , 0  , 0  , 0  ],
+                    [0  , 0  , 0  , 0  ]])
+            reward += 0
             
         except IllegalMove:
             logging.debug("Illegal move")
             info['illegal_move'] = True
             reward = self.illegal_move_reward
+
+            # TODO: Modify this part for the agent to have a chance to explore other actions (optional)
             done = True
-            # self.foul_count += 1
-            # if self.foul_count >= 100:
-            #     done = True
 
         truncate = False
         info['highest'] = self.highest()
         info['score']   = self.score
-        reward = 0 if reward == 0 else np.log2(score) / 100
-        if info['illegal_move']:
-            reward = -0.1
-
-        # count_prev = (pre_state != 0).flatten().sum().item()
-        # count_now = (self.Matrix != 0).flatten().sum().item()
-        # r = (count_prev - count_now) * 0.01
-        # reward += r
 
         # Return observation (board state), reward, done, truncate and info dict
         return stack(self.Matrix), reward, done, truncate, info
