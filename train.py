@@ -119,10 +119,10 @@ def train(eval_env, model, config):
                 output += f"{key}: {value:4.2f} | "
             pbar.write(output + f" | is_better: {str(is_better)}")
 
-            if is_better:
+            if is_better and config["save_model"]:
                 current_best = stats["score_mean"]
-                save_path = config["save_path"]
-                model.save(f"{save_path}")
+                model_save_path = config["model_save_path"]
+                model.save(f"{model_save_path}")
 
 
 def experiment(config):
@@ -130,7 +130,6 @@ def experiment(config):
         project="rl-2048",
         name=config["name"],
         config=config,
-        save_code=True,
         # sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
     )
 
@@ -147,15 +146,12 @@ def experiment(config):
     )
     train(eval_env, model, config)
 
-    code_artifact = wandb.Artifact(name="my2048_env.py", type="code")
-    code_artifact.add_file("./envs/my2048_env.py")
-    wandb.log_artifact(code_artifact)
+    # save model and also the training env
+    wandb.save("train.py")
+    wandb.save("envs/my2048_env.py")
+    if config["save_model"]:
+        wandb.save(config["model_save_path"] + ".zip")
 
-    code_artifact = wandb.Artifact(name="trian.py", type="code")
-    code_artifact.add_file("./train.py")
-    wandb.log_artifact(code_artifact)
-
-    wandb.save(config["save_path"] + ".zip")
     wandb.finish()
 
 
@@ -172,8 +168,9 @@ if __name__ == "__main__":
 
     config = {
         "name": "ppo-reward-scaling-neg",
+        "save_model": False,
         "notes": "",
     }
     config.update(base_config)
-    config["save_path"] = os.path.join("models", config["name"])
+    config["model_save_path"] = os.path.join("models", config["name"])
     experiment(config)
