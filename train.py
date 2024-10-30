@@ -167,8 +167,8 @@ if __name__ == "__main__":
     }
 
     config = {
-        "name": "ppo-reward-scaling-neg",
-        "save_model": False,
+        "name": "ppo-reward-scaling-neg-retry",
+        "save_model": True,
         "notes": "",
     }
     config.update(base_config)

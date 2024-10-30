@@ -131,9 +131,9 @@ class My2048Env(gym.Env):
             info['illegal_move'] = True
             reward = self.illegal_move_reward
             done = True
-            # self.foul_count += 1
-            # if self.foul_count >= 100:
-            #     done = True
+            self.foul_count += 1
+            if self.foul_count >= 100:
+                done = True
 
         truncate = False
         info['highest'] = self.highest()
