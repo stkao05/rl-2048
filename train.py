@@ -180,3 +180,4 @@ if __name__ == "__main__":
     config.update(base_config)
     config["model_save_path"] = os.path.join("models", config["name"])
     experiment(config)
+
