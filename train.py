@@ -16,6 +16,7 @@ from tqdm import tqdm
 import os
 import time
 from eval import evaluation
+from cnn import GridCnn
 
 warnings.filterwarnings("ignore")
 register(id="2048-v0", entry_point="envs:My2048Env")
@@ -136,6 +137,7 @@ def experiment(config):
     train_env = make_vec_env(
         make_train_env, n_envs=config["n_envs"], vec_env_cls=SubprocVecEnv
     )
+    # train_env = DummyVecEnv([make_train_env]) # only for debugging
     eval_env = DummyVecEnv([make_eval_env])
     model = config["algorithm"](
         config["policy_network"],
@@ -158,16 +160,20 @@ def experiment(config):
 if __name__ == "__main__":
     base_config = {
         "algorithm": PPO,
-        "policy_network": "MlpPolicy",
+        "policy_network": "CnnPolicy",
         "epoch_num": 200,
         "eval_episode_num": 100,
         "timesteps_per_epoch": 1000,
         "learning_rate": 1e-4,
         "n_envs": 8,
+        "policy_kwargs": {
+            "features_extractor_class": GridCnn,
+            "net_arch": []
+        }
     }
 
     config = {
-        "name": "ppo-reward-scaling-neg-retry",
+        "name": "ppo-cnn",
         "save_model": True,
         "notes": "",
     }
