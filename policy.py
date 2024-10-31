@@ -156,7 +156,7 @@ def is_valid_move_down(boards):
 
 
 def observation_to_grid(observation):
-    powers_of_2 = 2 ** th.arange(1, 17, dtype=th.int32).view(16, 1, 1)
+    powers_of_2 = 2 ** th.arange(1, 17, dtype=th.int32, device=observation.device).view(16, 1, 1)
     grid = th.sum(observation * powers_of_2, dim=1)  # (B, 4, 4)
     return grid
 
