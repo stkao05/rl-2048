@@ -132,7 +132,10 @@ def experiment(config):
     train_env = make_vec_env(
         make_train_env, n_envs=config["n_envs"], vec_env_cls=SubprocVecEnv
     )
+
     # train_env = DummyVecEnv([make_train_env]) # only for debugging
+    # print("WARN: USING DUMMY TRINAING")
+
     eval_env = DummyVecEnv([make_eval_env])
     model = config["algorithm"](
         config["policy_network"],
@@ -164,6 +167,9 @@ if __name__ == "__main__":
         "policy_network": MaskedMLPPolicy,
         "policy_kwargs": {
             "features_extractor_class": GridCnn,
+            # "features_extractor_kwargs": {
+            #     "features_dim":  64
+            # },
             "net_arch": []
         }
     }
