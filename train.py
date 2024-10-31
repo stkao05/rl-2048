@@ -164,12 +164,12 @@ if __name__ == "__main__":
         "policy_network": MaskedMLPPolicy,
         "policy_kwargs": {
             "features_extractor_class": GridCnn,
-            "net_arch": [64, 64, 64]
+            "net_arch": []
         }
     }
 
     config = {
-        "name": "ppo-masked-cnn-deeper",
+        "name": "ppo-masked-cnn",
         "save_model": True,
         "notes": "",
     }
