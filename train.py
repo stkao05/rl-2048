@@ -11,7 +11,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 import numpy as np
 from tqdm import tqdm
 import os
-from policy import MaskedMLPPolicy
+from policy import MaskedMLPPolicy, GridCnn
 
 warnings.filterwarnings("ignore")
 register(id="2048-v0", entry_point="envs:My2048Env")
@@ -161,14 +161,14 @@ if __name__ == "__main__":
         "learning_rate": 1e-4,
         "n_envs": 8,
         "policy_network": MaskedMLPPolicy,
-        # "policy_kwargs": {
-        #     "features_extractor_class": GridCnn,
-        #     "net_arch": []
-        # }
+        "policy_kwargs": {
+            "features_extractor_class": GridCnn,
+            "net_arch": []
+        }
     }
 
     config = {
-        "name": "ppo-masked",
+        "name": "ppo-masked-cnn",
         "save_model": True,
         "notes": "",
     }

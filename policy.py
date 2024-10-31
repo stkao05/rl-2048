@@ -10,6 +10,7 @@ from stable_baselines3.common.policies import ActorCriticPolicy, BaseFeaturesExt
 from torch import nn
 
 
+# code adopted and modified from ActorCriticPolicy
 class MaskedMLPPolicy(ActorCriticPolicy):
     def forward(
         self, obs: th.Tensor, deterministic: bool = False
@@ -162,6 +163,8 @@ def observation_to_grid(observation):
 
 class GridCnn(BaseFeaturesExtractor):
     """
+    code adopted and modified from NaturalCNN
+
     :param observation_space:
     :param features_dim: Number of features extracted.
         This corresponds to the number of unit for the last layer.
