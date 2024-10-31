@@ -145,6 +145,7 @@ def experiment(config):
 
     # save model and also the training env
     wandb.save("train.py")
+    wandb.save("policy.py")
     wandb.save("envs/my2048_env.py")
     if config["save_model"]:
         wandb.save(config["model_save_path"] + ".zip")
@@ -163,12 +164,12 @@ if __name__ == "__main__":
         "policy_network": MaskedMLPPolicy,
         "policy_kwargs": {
             "features_extractor_class": GridCnn,
-            "net_arch": []
+            "net_arch": [64, 64, 64]
         }
     }
 
     config = {
-        "name": "ppo-masked-cnn",
+        "name": "ppo-masked-cnn-deeper",
         "save_model": True,
         "notes": "",
     }
