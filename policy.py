@@ -201,7 +201,7 @@ class GridCnn(BaseFeaturesExtractor):
         with th.no_grad():
             n_flatten = self.cnn(
                 th.as_tensor(observation_space.sample()[None]).float()
-            ).shape[1]
+            ).shape[1] # n_flatten: 128
 
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 

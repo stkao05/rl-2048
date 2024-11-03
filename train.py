@@ -167,10 +167,10 @@ if __name__ == "__main__":
         "policy_network": MaskedMLPPolicy,
         "policy_kwargs": {
             "features_extractor_class": GridCnn,
-            # "features_extractor_kwargs": {
-            #     "features_dim":  64
-            # },
-            "net_arch": []
+            "features_extractor_kwargs": {
+                "features_dim": 128 
+            },
+            "net_arch": [128, 64]
         }
     }
 
