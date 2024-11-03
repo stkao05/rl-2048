@@ -53,9 +53,9 @@ def evaluation(env, model, render_last, eval_num=100):
 
 
 if __name__ == "__main__":
-    model_path = "models/ppo-masked-cnn.zip"  # Change path name to load different models
+    model_path = "model.zip"  # Change path name to load different models
     env = gym.make('2048-eval')
-    env = RecordVideo(env, video_folder="./videos", disable_logger=False)
+    # env = RecordVideo(env, video_folder="./videos", disable_logger=False)
 
     ### Load model with SB3
     # Note: Model can be loaded with arbitrary algorithm class for evaluation
@@ -63,7 +63,8 @@ if __name__ == "__main__":
     model = PPO.load(model_path)
     
     eval_num = 100
-    score, highest, rewards = evaluation(env, model, True, eval_num)
+    score, highest, rewards = evaluation(env, model, render_last=False, eval_num=eval_num)
+
 
     print("Avg_score:  ", np.sum(score)/eval_num)
     print("Avg_highest:", np.sum(highest)/eval_num)
